@@ -225,6 +225,7 @@ func expandClientRefreshToken(data *schema.ResourceData) *management.ClientRefre
 		refreshToken.InfiniteTokenLifetime = value.Bool(config.GetAttr("infinite_token_lifetime"))
 		refreshToken.InfiniteIdleTokenLifetime = value.Bool(config.GetAttr("infinite_idle_token_lifetime"))
 		refreshToken.IdleTokenLifetime = value.Int(config.GetAttr("idle_token_lifetime"))
+		refreshToken.Policies = expandRefreshTokenPolicies(config.GetAttr("policies"))
 		return stop
 	})
 
@@ -233,6 +234,24 @@ func expandClientRefreshToken(data *schema.ResourceData) *management.ClientRefre
 	}
 
 	return &refreshToken
+}
+
+func expandRefreshTokenPolicies(policies cty.Value) *[]management.ClientRefreshTokenPolicy {
+	clientRefreshTokenPolicy := make([]management.ClientRefreshTokenPolicy, 0)
+
+	policies.ForEachElement(func(_ cty.Value, dep cty.Value) (stop bool) {
+		clientRefreshTokenPolicy = append(clientRefreshTokenPolicy, management.ClientRefreshTokenPolicy{
+			Audience: value.String(dep.GetAttr("audience")),
+			Scope:    value.Strings(dep.GetAttr("scope")),
+		})
+		return stop
+	})
+
+	if len(clientRefreshTokenPolicy) == 0 {
+		return nil
+	}
+
+	return &clientRefreshTokenPolicy
 }
 
 func expandClientJWTConfiguration(data *schema.ResourceData) *management.ClientJWTConfiguration {
@@ -1024,6 +1043,12 @@ func expandSessionTransfer(data *schema.ResourceData) *management.SessionTransfe
 
 	sessionTransferConfig := data.GetRawConfig().GetAttr("session_transfer")
 	if sessionTransferConfig.IsNull() {
+		return nil
+	}
+
+	// Handles case when session_transfer is not defined.
+	_, ok := data.GetOk("session_transfer")
+	if !ok {
 		return nil
 	}
 
