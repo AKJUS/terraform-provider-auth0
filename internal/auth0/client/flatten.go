@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/structure"
+
 	"github.com/auth0/go-auth0/management"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -64,8 +66,22 @@ func flattenClientRefreshTokenConfiguration(refreshToken *management.ClientRefre
 			"infinite_token_lifetime":      refreshToken.GetInfiniteTokenLifetime(),
 			"infinite_idle_token_lifetime": refreshToken.GetInfiniteIdleTokenLifetime(),
 			"idle_token_lifetime":          refreshToken.GetIdleTokenLifetime(),
+			"policies":                     flattenRefreshTokenPolicies(refreshToken.GetPolicies()),
 		},
 	}
+}
+
+func flattenRefreshTokenPolicies(policies []management.ClientRefreshTokenPolicy) []interface{} {
+	var result []interface{}
+
+	for _, policy := range policies {
+		result = append(result, map[string]interface{}{
+			"audience": policy.GetAudience(),
+			"scope":    policy.GetScope(),
+		})
+	}
+
+	return result
 }
 
 func flattenOIDCBackchannelURLs(backchannelLogout *management.OIDCBackchannelLogout, logout *management.OIDCLogout) []string {
@@ -523,9 +539,16 @@ func flattenClientAddonSAML2(addon *management.SAML2ClientAddon) []interface{} {
 		}
 	}
 
+	var flexibleMappingsMap string
+
+	if len(addon.GetMappings()) == 0 {
+		flexibleMappingsMap, _ = structure.FlattenJsonToString(addon.GetFlexibleMappings())
+	}
+
 	return []interface{}{
 		map[string]interface{}{
 			"mappings":                           addon.GetMappings(),
+			"flexible_mappings":                  flexibleMappingsMap,
 			"audience":                           addon.GetAudience(),
 			"recipient":                          addon.GetRecipient(),
 			"create_upn_claim":                   addon.GetCreateUPNClaim(),
@@ -633,6 +656,7 @@ func flattenSessionTransfer(sessionTransfer *management.SessionTransfer) []inter
 		"can_create_session_transfer_token": sessionTransfer.GetCanCreateSessionTransferToken(),
 		"allowed_authentication_methods":    sessionTransfer.GetAllowedAuthenticationMethods(),
 		"enforce_device_binding":            sessionTransfer.GetEnforceDeviceBinding(),
+		"allow_refresh_token":               sessionTransfer.GetAllowRefreshToken(),
 	}
 
 	return []interface{}{

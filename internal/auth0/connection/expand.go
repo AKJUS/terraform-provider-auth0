@@ -390,6 +390,7 @@ func expandConnectionOptionsAuth0(_ *schema.ResourceData, config cty.Value) (int
 		Precedence:                       value.Strings(config.GetAttr("precedence")),
 		Attributes:                       expandConnectionOptionsAttributes(config.GetAttr("attributes")),
 		StrategyVersion:                  value.Int(config.GetAttr("strategy_version")),
+		RealmFallback:                    value.Bool(config.GetAttr("realm_fallback")),
 	}
 
 	config.GetAttr("validation").ForEachElement(
@@ -582,11 +583,12 @@ func expandConnectionOptionsOAuth2(data *schema.ResourceData, config cty.Value) 
 	customHeadersConfig := config.GetAttr("custom_headers")
 
 	if !customHeadersConfig.IsNull() {
-		customHeaders := make([]map[string]string, 0)
+		customHeaders := make(map[string]string)
 
 		customHeadersConfig.ForEachElement(func(_ cty.Value, httpHeader cty.Value) (stop bool) {
-			customHeaders = append(customHeaders, *value.MapOfStrings(httpHeader))
-			return stop
+			m := httpHeader.AsValueMap()
+			customHeaders[m["header"].AsString()] = m["value"].AsString()
+			return false
 		})
 
 		options.CustomHeaders = &customHeaders
@@ -907,6 +909,10 @@ func expandConnectionOptionsOkta(data *schema.ResourceData, config cty.Value) (i
 	})
 	if err != nil {
 		return nil, diag.FromErr(err)
+	}
+
+	if len(data.Get("options.0.scopes").(*schema.Set).List()) < 1 {
+		return nil, diag.FromErr(fmt.Errorf("the scopes option is required for connection strategy %s", management.ConnectionStrategyOkta))
 	}
 
 	expandConnectionOptionsScopes(data, options)

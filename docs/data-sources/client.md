@@ -296,6 +296,7 @@ Read-Only:
 - `create_upn_claim` (Boolean)
 - `destination` (String)
 - `digest_algorithm` (String)
+- `flexible_mappings` (String)
 - `include_attribute_name_format` (Boolean)
 - `issuer` (String)
 - `lifetime_in_seconds` (Number)
@@ -594,8 +595,18 @@ Read-Only:
 - `infinite_idle_token_lifetime` (Boolean)
 - `infinite_token_lifetime` (Boolean)
 - `leeway` (Number)
+- `policies` (Set of Object) (see [below for nested schema](#nestedobjatt--refresh_token--policies))
 - `rotation_type` (String)
 - `token_lifetime` (Number)
+
+<a id="nestedobjatt--refresh_token--policies"></a>
+### Nested Schema for `refresh_token.policies`
+
+Read-Only:
+
+- `audience` (String)
+- `scope` (List of String)
+
 
 
 <a id="nestedatt--session_transfer"></a>
@@ -603,6 +614,7 @@ Read-Only:
 
 Read-Only:
 
+- `allow_refresh_token` (Boolean)
 - `allowed_authentication_methods` (Set of String)
 - `can_create_session_transfer_token` (Boolean)
 - `enforce_device_binding` (String)

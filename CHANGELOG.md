@@ -1,3 +1,41 @@
+## v1.20.0
+
+FEATURES:
+
+- `resource/auth0_client`: Add support for the `flexible_mappings` field to handle complex key structures (e.g., slice-based keys) ([#1253](https://github.com/auth0/terraform-provider-auth0/pull/1253/))
+- `resource/auth0_client`: Add support to configure `allow_refresh_token` in `session_transfer` ([#1246](https://github.com/auth0/terraform-provider-auth0/pull/1246/))
+- Add support for Auth0 CLI-based authentication via the `cli_login` flag ([#1242](https://github.com/auth0/terraform-provider-auth0/pull/1242/))
+
+ENHANCEMENTS:
+
+- `resource/auth0_prompt_screen_renderer`: Add support for 21 new screens ([#1249](https://github.com/auth0/terraform-provider-auth0/pull/1249/))
+
+BUG FIXES:
+
+- `resource/auth0_client`: Update `custom_headers` to a set of objects (maps with `header`/`value` keys) for improved field validation and item order preservation ([#1253](https://github.com/auth0/terraform-provider-auth0/pull/1253/))
+- `resource/auth0_resource_server_scopes`: Fix noisy plan on the `description` field ([#1253](https://github.com/auth0/terraform-provider-auth0/pull/1253/))
+- `resource/auth0_log_stream`: Fix noisy plan caused by sensitive required fields ([#1240](https://github.com/auth0/terraform-provider-auth0/pull/1240/))
+
+
+## v1.19.1
+
+BUG FIXES:
+
+- `resource/auth0_client`: Handle null on `session_transfer` and `policies` in refresh_token ([#1237](https://github.com/auth0/terraform-provider-auth0/pull/1237/))
+
+## v1.19.0
+
+FEATURES:
+- `resource/auth0_client`: Support Native to Web SSO (`EA` Release)([#1231](https://github.com/auth0/terraform-provider-auth0/pull/1231/))
+- `resource/auth0_client`: Add support to configure multi Multi-Resource Refresh Token via `policies` (`EA` Release) ([#1223](https://github.com/auth0/terraform-provider-auth0/pull/1223/))
+
+ENHANCEMENTS:
+- `resource/auth0_prompt_custom_text`: Add support for `email-identifier-challenge` prompt ([#1232](https://github.com/auth0/terraform-provider-auth0/pull/1232/))
+
+BUG FIXES:
+- `resource/auth0_connection`: Add support to set `realm_fallback` ([#1224](https://github.com/auth0/terraform-provider-auth0/pull/1224/))
+- `resource/auth0_connection`: Add validation over `scopes` on Okta Connection ([#945](https://github.com/auth0/terraform-provider-auth0/pull/945/))
+
 ## v1.18.0
 
 ENHANCEMENTS:

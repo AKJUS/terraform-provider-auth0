@@ -5,6 +5,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/structure"
+
 	"github.com/auth0/go-auth0/management"
 	"github.com/hashicorp/go-cty/cty"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
@@ -119,6 +121,7 @@ func NewResource() *schema.Resource {
 					Type: schema.TypeString,
 				},
 				Optional:    true,
+				Computed:    true,
 				Description: "Set of URLs that are valid to call back from Auth0 for OIDC backchannel logout. Currently only one URL is allowed.",
 				Deprecated: "This resource is deprecated and will be removed in the next major version. " +
 					"Please use `oidc_logout` for managing OIDC backchannel logout URLs.",
@@ -460,6 +463,30 @@ func NewResource() *schema.Resource {
 							Type:        schema.TypeInt,
 							Optional:    true,
 							Description: "The time in seconds after which inactive refresh tokens will expire.",
+						},
+						"policies": {
+							Type:     schema.TypeSet,
+							Optional: true,
+							Description: "A collection of policies governing multi-resource refresh token exchange " +
+								"(MRRT), defining how refresh tokens can be used across different resource servers",
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"audience": {
+										Type:     schema.TypeString,
+										Required: true,
+										Description: "The identifier of the resource server to which the Multi " +
+											"Resource Refresh Token Policy applies",
+									},
+									"scope": {
+										Type:     schema.TypeList,
+										Elem:     &schema.Schema{Type: schema.TypeString},
+										Required: true,
+										Description: "The resource server permissions granted under the Multi " +
+											"Resource Refresh Token Policy, defining the context in which an " +
+											"access token can be used",
+									},
+								},
+							},
 						},
 					},
 				},
@@ -1112,12 +1139,23 @@ func NewResource() *schema.Resource {
 											"callback URL if no SAMLRequest was sent.",
 									},
 									"mappings": {
-										Type:     schema.TypeMap,
-										Optional: true,
-										Elem:     schema.TypeString,
+										Type:          schema.TypeMap,
+										Optional:      true,
+										Elem:          schema.TypeString,
+										ConflictsWith: []string{"addons.0.samlp.0.flexible_mappings"},
 										Description: "Mappings between the Auth0 user profile property " +
 											"name (`name`) and the output attributes on the SAML " +
 											"attribute in the assertion (`value`).",
+									},
+									"flexible_mappings": {
+										Type:             schema.TypeString,
+										Optional:         true,
+										ValidateFunc:     validation.StringIsJSON,
+										ConflictsWith:    []string{"addons.0.samlp.0.mappings"},
+										DiffSuppressFunc: structure.SuppressJsonDiff,
+										Description: "This is a supporting attribute to `mappings` field." +
+											"Please note this is an experimental field. " + "" +
+											"It should only be used when needed to send a map with keys as slices.",
 									},
 									"create_upn_claim": {
 										Type:     schema.TypeBool,
@@ -1432,6 +1470,12 @@ func NewResource() *schema.Resource {
 							Description: "Configures the level of device binding enforced when a session_transfer_token is consumed. " +
 								"Can be one of `ip`, `asn` or `none`.",
 							ValidateFunc: validation.StringInSlice([]string{"ip", "asn", "none"}, false),
+						},
+						"allow_refresh_token": {
+							Type:        schema.TypeBool,
+							Optional:    true,
+							Computed:    true,
+							Description: "Indicates whether the application is allowed to use a refresh token when using a session_transfer_token session.",
 						},
 					},
 				},

@@ -225,6 +225,7 @@ func expandClientRefreshToken(data *schema.ResourceData) *management.ClientRefre
 		refreshToken.InfiniteTokenLifetime = value.Bool(config.GetAttr("infinite_token_lifetime"))
 		refreshToken.InfiniteIdleTokenLifetime = value.Bool(config.GetAttr("infinite_idle_token_lifetime"))
 		refreshToken.IdleTokenLifetime = value.Int(config.GetAttr("idle_token_lifetime"))
+		refreshToken.Policies = expandRefreshTokenPolicies(config.GetAttr("policies"))
 		return stop
 	})
 
@@ -233,6 +234,24 @@ func expandClientRefreshToken(data *schema.ResourceData) *management.ClientRefre
 	}
 
 	return &refreshToken
+}
+
+func expandRefreshTokenPolicies(policies cty.Value) *[]management.ClientRefreshTokenPolicy {
+	clientRefreshTokenPolicy := make([]management.ClientRefreshTokenPolicy, 0)
+
+	policies.ForEachElement(func(_ cty.Value, dep cty.Value) (stop bool) {
+		clientRefreshTokenPolicy = append(clientRefreshTokenPolicy, management.ClientRefreshTokenPolicy{
+			Audience: value.String(dep.GetAttr("audience")),
+			Scope:    value.Strings(dep.GetAttr("scope")),
+		})
+		return stop
+	})
+
+	if len(clientRefreshTokenPolicy) == 0 {
+		return nil
+	}
+
+	return &clientRefreshTokenPolicy
 }
 
 func expandClientJWTConfiguration(data *schema.ResourceData) *management.ClientJWTConfiguration {
@@ -923,6 +942,11 @@ func expandClientAddonSAMLP(samlpCfg cty.Value) *management.SAML2ClientAddon {
 			SigningCert:                    value.String(samlpCfg.GetAttr("signing_cert")),
 		}
 
+		flexibleMappings, err := value.MapFromJSON(samlpCfg.GetAttr("flexible_mappings"))
+		if err == nil {
+			samlpAddon.FlexibleMappings = flexibleMappings
+		}
+
 		var logout management.SAML2ClientAddonLogout
 
 		samlpCfg.GetAttr("logout").ForEachElement(func(_ cty.Value, logoutCfg cty.Value) (stop bool) {
@@ -981,10 +1005,6 @@ func expandClientAddonSAMLP(samlpCfg cty.Value) *management.SAML2ClientAddon {
 		return stop
 	})
 
-	if samlpAddon == (management.SAML2ClientAddon{}) {
-		return nil
-	}
-
 	return &samlpAddon
 }
 
@@ -1027,12 +1047,19 @@ func expandSessionTransfer(data *schema.ResourceData) *management.SessionTransfe
 		return nil
 	}
 
+	// Handles case when session_transfer is not defined.
+	_, ok := data.GetOk("session_transfer")
+	if !ok {
+		return nil
+	}
+
 	var sessionTransfer management.SessionTransfer
 
 	sessionTransferConfig.ForEachElement(func(_ cty.Value, config cty.Value) (stop bool) {
 		sessionTransfer.CanCreateSessionTransferToken = value.Bool(config.GetAttr("can_create_session_transfer_token"))
 		sessionTransfer.AllowedAuthenticationMethods = value.Strings(config.GetAttr("allowed_authentication_methods"))
 		sessionTransfer.EnforceDeviceBinding = value.String(config.GetAttr("enforce_device_binding"))
+		sessionTransfer.AllowRefreshToken = value.Bool(config.GetAttr("allow_refresh_token"))
 		return stop
 	})
 
