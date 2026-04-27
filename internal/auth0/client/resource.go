@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -33,7 +34,7 @@ func NewResource() *schema.Resource {
 		UpdateContext: updateClient,
 		DeleteContext: deleteClient,
 		Importer: &schema.ResourceImporter{
-			StateContext: schema.ImportStatePassthroughContext,
+			StateContext: importClient,
 		},
 		Description: "With this resource, you can set up applications that use Auth0 for authentication " +
 			"and configure allowed callback URLs and secrets for these applications.",
@@ -53,6 +54,28 @@ func NewResource() *schema.Resource {
 				Type:        schema.TypeString,
 				Computed:    true,
 				Description: "The ID of the client.",
+			},
+			"external_client_id": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "The URL of the Client ID Metadata Document. Only present for CIMD-registered clients.",
+			},
+			"external_metadata_type": {
+				Type:        schema.TypeString,
+				Computed:    true,
+				Description: "Type of external metadata. Value is `cimd` for CIMD-registered clients.",
+			},
+			"external_metadata_created_by": {
+				Type:     schema.TypeString,
+				Computed: true,
+				Description: "Who created the external metadata client: `admin` (via Management API), " +
+					"`client` (self-registered), or `unknown`.",
+			},
+			"jwks_uri": {
+				Type:     schema.TypeString,
+				Computed: true,
+				Description: "URL for the JSON Web Key Set (JWKS) containing the public keys used for " +
+					"`private_key_jwt` authentication. Only present for CIMD clients using `private_key_jwt` authentication.",
 			},
 			"client_aliases": {
 				Type: schema.TypeList,
@@ -79,11 +102,10 @@ func NewResource() *schema.Resource {
 					"If none is set, the default badge for the application type will be shown.",
 			},
 			"is_first_party": {
-				Type:     schema.TypeBool,
-				Optional: true,
-				Computed: true,
-				Description: "Indicates whether this client is a first-party client." +
-					"Defaults to true from the API",
+				Type:        schema.TypeBool,
+				Optional:    true,
+				Computed:    true,
+				Description: "Indicates whether this client is a first-party client.",
 			},
 			"is_token_endpoint_ip_header_trusted": {
 				Type:     schema.TypeBool,
@@ -1721,4 +1743,28 @@ func deleteClient(ctx context.Context, data *schema.ResourceData, meta interface
 	}
 
 	return nil
+}
+
+// importClient validates the client is not a CIMD client before allowing
+// import. Prevents users from accidentally importing a CIMD client into
+// auth0_client (which would cause unexpected PATCH errors or data loss).
+func importClient(ctx context.Context, data *schema.ResourceData, meta interface{}) ([]*schema.ResourceData, error) {
+	api := meta.(*config.Config).GetAPI()
+
+	client, err := api.Client.Read(ctx, data.Id())
+	if err != nil {
+		return nil, err
+	}
+
+	if client.GetExternalMetadataType() == "cimd" {
+		return nil, fmt.Errorf(
+			"client %q is a CIMD client. "+
+				"Use the auth0_client_cimd resource to manage CIMD clients",
+			data.Id(),
+		)
+	}
+
+	data.SetId(client.GetClientID())
+
+	return []*schema.ResourceData{data}, nil
 }
